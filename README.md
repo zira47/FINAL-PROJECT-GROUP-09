@@ -24,7 +24,7 @@ Program ini mensimulasikan sistem penggajian di mana pengguna dapat menambahkan 
 
 ---
 
-## Struktur Program
+## Struktur
 
 Program ini menggunakan beberapa konsep dalam bahasa C:
 
@@ -48,7 +48,7 @@ Program ini menggunakan beberapa konsep dalam bahasa C:
 
 ---
 
-## Logika Perhitungan Gaji
+## Perhitungan Gaji
 
 ### 1. Gaji Kotor Per Bulan
 ```
@@ -86,7 +86,7 @@ Gaji Bersih  = Gaji Kotor/Bulan − Pajak/Bulan
 
 ---
 
-## 🖥️ Contoh Penggunaan
+## Contoh Output
 
 ```
 ===== SISTEM MANAJEMEN GAJI (PPh 21) =====
