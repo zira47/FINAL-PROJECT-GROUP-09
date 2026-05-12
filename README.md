@@ -52,7 +52,7 @@ Program ini menggunakan beberapa konsep dalam bahasa C:
 
 ### 1. Gaji Kotor Per Bulan
 ```
-Lembur = (Jam - 40) × (Tarif × 1.5)  hanya jika jam kerjanya > 40
+Lembur = (Jam - 160) × (Tarif × 1.5)  hanya jika jam kerjanya > 160
 Gaji Kotor = (Jam × Tarif) + Lembur
 ```
 
