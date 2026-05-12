@@ -1,0 +1,438 @@
+#include <stdio.h>    // Library untuk fungsi input/output (printf, scanf)
+#include <stdlib.h>   // Library untuk fungsi memori dinamis (malloc, free)
+
+#define MAKS 100      // Konstanta: maksimal 100 karyawan bisa disimpan
+
+// ENUM
+// Enum adalah tipe data yang nilainya sudah ditentukan
+// Compiler otomatis memberi nilai 0, 1, 2, dst
+
+
+// Enum untuk jabatan karyawan
+typedef enum
+{
+    STAF,       // bernilai 0
+    MANAJER,    // bernilai 1
+    MAGANG      // bernilai 2
+} Jabatan;
+
+
+// Enum untuk status perkawinan (digunakan untuk menghitung PTKP)
+typedef enum
+{
+    TK,     // Tidak Kawin → bernilai 0
+    K       // Kawin       → bernilai 1
+} StatusPerkawinan;
+
+
+// UNION
+// Union adalah tipe data di mana semua anggotanya
+// berbagi SATU lokasi memori yang sama.
+// Hanya satu anggota yang aktif pada satu waktu.
+typedef union
+{
+    float gajiPerBulan;     // Digunakan untuk menyimpan gaji bersih per bulan
+    float bonus;            // Berbagi memori dengan gajiPerBulan
+} InfoGaji;
+
+
+// STRUCT
+// Struct adalah kumpulan variabel berbeda tipe
+// yang dikelompokkan menjadi satu kesatuan data.
+// Di sini digunakan sebagai "cetak biru" data karyawan.
+typedef struct
+{
+    int id;                         // Nomor unik identitas karyawan
+    char nama[50];                  // Nama karyawan, maksimal 50 karakter
+    int jam;                        // Total jam kerja per bulan
+    float tarif;                    // Upah per jam (Rupiah)
+    float gajiKotorPerBulan;        // Gaji sebelum dipotong pajak
+    float pajakPerBulan;            // Besar potongan PPh 21 per bulan
+    float gajiBersihPerBulan;       // Gaji setelah dipotong pajak
+    float ptkp;                     // Penghasilan Tidak Kena Pajak (per tahun)
+    float pkp;                      // Penghasilan Kena Pajak (per tahun)
+    Jabatan jabatan;                // Jabatan: STAF / MANAJER / MAGANG
+    StatusPerkawinan perkawinan;    // Status: TK (Tidak Kawin) / K (Kawin)
+    int tanggungan;                 // Jumlah tanggungan keluarga (0 sampai 3)
+    InfoGaji info;                  // Union untuk menyimpan info gaji akhir
+} Karyawan;
+
+
+// DEKLARASI FUNGSI
+// Ditulis sebelum main() agar compiler mengenali
+// fungsi-fungsi ini sebelum dipanggil
+void tambahKaryawan(Karyawan *kar, int *jumlah);            // Menambah karyawan baru
+void tampilkanKaryawan(Karyawan *kar, int jumlah);          // Menampilkan semua data karyawan
+void hitungGaji(Karyawan *kar);                             // Menghitung gaji + pajak karyawan
+float getPTKP(StatusPerkawinan perkawinan, int tanggungan); // Menghitung nilai PTKP
+float hitungPPh21(float pkp);                               // Menghitung pajak progresif PPh 21
+void cariKaryawan(Karyawan *kar, int jumlah);               // Mencari karyawan berdasarkan ID
+void statistik(Karyawan *kar, int jumlah);                  // Menampilkan statistik gaji
+
+
+// FUNGSI MAIN — Titik masuk program
+int main()
+{
+    // Alokasi memori dinamis untuk menyimpan hingga MAKS karyawan
+    // malloc mengembalikan pointer ke blok memori yang dialokasikan
+    Karyawan *karyawan = (Karyawan *)malloc(MAKS * sizeof(Karyawan));
+
+    int jumlah = 0;     // Penghitung jumlah karyawan yang sudah diinput
+    int pilihan;        // Menyimpan angka pilihan menu dari pengguna
+
+    // Loop do-while: jalankan minimal sekali, ulangi sampai pengguna pilih 5
+    do
+    {
+        // Tampilkan menu utama setiap putaran
+        printf("\n===== SISTEM MANAJEMEN GAJI (PPh 21) =====\n");
+        printf("1. Tambah Karyawan\n");
+        printf("2. Tampilkan Karyawan\n");
+        printf("3. Cari Karyawan\n");
+        printf("4. Statistik Gaji\n");
+        printf("5. Keluar\n");
+        printf("Pilih Menu: ");
+
+        // Baca input pengguna; jika bukan angka, hentikan program
+        if (scanf("%d", &pilihan) != 1)
+        {
+            printf("\nInput Tidak Valid\n");
+            return 0;   // Keluar dari program dengan kode 0 (normal)
+        }
+
+        // Eksekusi fungsi sesuai pilihan menu
+        switch (pilihan)
+        {
+        case 1:
+            tambahKaryawan(karyawan, &jumlah);  // & agar nilai jumlah bisa diubah di dalam fungsi
+            break;
+        case 2:
+            tampilkanKaryawan(karyawan, jumlah);
+            break;
+        case 3:
+            cariKaryawan(karyawan, jumlah);
+            break;
+        case 4:
+            statistik(karyawan, jumlah);
+            break;
+        case 5:
+            printf("\nProgram Selesai\n");
+            break;
+        default:
+            printf("\nMenu Tidak Valid\n");    // Jika input bukan 1-5
+        }
+
+    } while (pilihan != 5); // Ulangi selama pilihan bukan 5
+
+    free(karyawan); // Bebaskan memori yang dialokasikan malloc agar tidak bocor
+    return 0;       // Program selesai dengan normal
+}
+
+
+// FUNGSI TAMBAH KARYAWAN
+// Parameter:
+//   *kar    → pointer ke array karyawan
+//   *jumlah → pointer ke jumlah karyawan (agar bisa diubah)
+void tambahKaryawan(Karyawan *kar, int *jumlah)
+{
+    // kar[*jumlah] adalah slot array yang masih kosong
+    // Contoh: jika jumlah=2, maka isi slot index ke-2
+
+    printf("\nID Karyawan: ");
+    scanf("%d", &kar[*jumlah].id);      // Simpan ID ke slot kosong
+
+    printf("Nama Karyawan: ");
+    scanf("%s", kar[*jumlah].nama);     // Simpan nama (tidak bisa mengandung spasi)
+
+    printf("Jam Kerja (per bulan): ");
+    scanf("%d", &kar[*jumlah].jam);     // Simpan total jam kerja
+
+    printf("Tarif Per Jam (Rp): ");
+    scanf("%f", &kar[*jumlah].tarif);   // Simpan tarif upah per jam
+
+    // --- Input Jabatan ---
+    int pilihanJabatan;
+    printf("\nJabatan\n");
+    printf("0. Staf\n");
+    printf("1. Manajer\n");
+    printf("2. Magang\n");
+    printf("Pilih Jabatan: ");
+    scanf("%d", &pilihanJabatan);
+    // Cast (konversi paksa) dari int ke tipe enum Jabatan
+    kar[*jumlah].jabatan = (Jabatan)pilihanJabatan;
+
+    // --- Input Status Perkawinan ---
+    int pilihanPerkawinan;
+    printf("\nStatus Perkawinan\n");
+    printf("0. Tidak Kawin (TK)\n");
+    printf("1. Kawin (K)\n");
+    printf("Pilih Status: ");
+    scanf("%d", &pilihanPerkawinan);
+    // Cast dari int ke tipe enum StatusPerkawinan
+    kar[*jumlah].perkawinan = (StatusPerkawinan)pilihanPerkawinan;
+
+    // --- Input Tanggungan dengan validasi otomatis ---
+    printf("Jumlah Tanggungan (0-3): ");
+    scanf("%d", &kar[*jumlah].tanggungan);
+    if (kar[*jumlah].tanggungan < 0) kar[*jumlah].tanggungan = 0; // Paksa minimum 0
+    if (kar[*jumlah].tanggungan > 3) kar[*jumlah].tanggungan = 3; // Paksa maksimum 3
+
+    // Hitung gaji karyawan ini sebelum disimpan
+    hitungGaji(&kar[*jumlah]);
+
+    // Tambah jumlah karyawan: *jumlah = *jumlah + 1
+    (*jumlah)++;
+
+    printf("Karyawan Berhasil Ditambahkan\n");
+}
+
+
+// FUNGSI GET PTKP
+// Mengembalikan nilai PTKP setahun sesuai
+// aturan perpajakan Indonesia 2024
+//
+// Tabel PTKP:
+//   TK/0 = Rp54.000.000
+//   K/0  = Rp58.500.000
+//   Setiap tanggungan tambah Rp4.500.000 (maks 3)
+float getPTKP(StatusPerkawinan perkawinan, int tanggungan)
+{
+    float ptkpDasar;
+
+    // Tentukan PTKP dasar berdasarkan status perkawinan
+    if (perkawinan == TK)
+        ptkpDasar = 54000000.0f;    // Tidak kawin: Rp54 juta/tahun
+    else
+        ptkpDasar = 58500000.0f;    // Kawin: Rp58,5 juta/tahun
+
+    // Hitung tambahan PTKP untuk tanggungan
+    // Contoh: 2 tanggungan → 2 × 4.500.000 = Rp9.000.000
+    float bonusTanggungan = tanggungan * 4500000.0f;
+
+    // Kembalikan total PTKP (dasar + bonus tanggungan)
+    return ptkpDasar + bonusTanggungan;
+}
+
+
+// FUNGSI HITUNG PPh 21 PROGRESIF
+// Pajak dihitung berlapis sesuai PKP setahun:
+//
+//   Lapisan 1: s.d. Rp60 juta          →  5%
+//   Lapisan 2: Rp60jt  - Rp250jt       → 15%
+//   Lapisan 3: Rp250jt - Rp500jt       → 25%
+//   Lapisan 4: Rp500jt - Rp5 miliar    → 30%
+//   Lapisan 5: di atas Rp5 miliar      → 35%
+//
+// "Progresif" artinya setiap lapisan dihitung
+// secara terpisah, bukan seluruh PKP dikali tarif.
+float hitungPPh21(float pkp)
+{
+    // Jika PKP nol atau negatif, tidak ada pajak
+    if (pkp <= 0)
+        return 0;
+
+    float pajak = 0;
+
+    if (pkp <= 60000000)
+    {
+        // Seluruh PKP masuk lapisan 1 saja
+        pajak = pkp * 0.05f;
+    }
+    else if (pkp <= 250000000)
+    {
+        // Rp60 juta pertama kena 5%
+        pajak = 60000000 * 0.05f;
+        // Sisanya (PKP - 60jt) kena 15%
+        pajak += (pkp - 60000000) * 0.15f;
+    }
+    else if (pkp <= 500000000)
+    {
+        pajak  = 60000000 * 0.05f;                 // Lapisan 1
+        pajak += (250000000 - 60000000) * 0.15f;   // Lapisan 2
+        pajak += (pkp - 250000000) * 0.25f;        // Lapisan 3
+    }
+    else if (pkp <= 5000000000.0f)
+    {
+        pajak  = 60000000 * 0.05f;                 // Lapisan 1
+        pajak += (250000000 - 60000000) * 0.15f;   // Lapisan 2
+        pajak += (500000000 - 250000000) * 0.25f;  // Lapisan 3
+        pajak += (pkp - 500000000) * 0.30f;        // Lapisan 4
+    }
+    else
+    {
+        // PKP di atas 5 miliar: semua lapisan aktif
+        pajak  = 60000000 * 0.05f;                         // Lapisan 1
+        pajak += (250000000 - 60000000) * 0.15f;           // Lapisan 2
+        pajak += (500000000 - 250000000) * 0.25f;          // Lapisan 3
+        pajak += (5000000000.0f - 500000000) * 0.30f;      // Lapisan 4
+        pajak += (pkp - 5000000000.0f) * 0.35f;            // Lapisan 5
+    }
+
+    return pajak; // Total pajak setahun (bukan per bulan)
+}
+
+
+// FUNGSI HITUNG GAJI
+// Menghitung semua komponen gaji karyawan:
+// gaji kotor, PTKP, PKP, pajak, dan gaji bersih
+void hitungGaji(Karyawan *kar)
+{
+    // --- LANGKAH 1: Hitung Gaji Kotor Per Bulan ---
+    float lembur = 0;
+    if (kar->jam > 40)
+    {
+        // Jam kerja di atas 40 dihitung sebagai lembur dengan tarif 1,5×
+        // Contoh: jam=50, tarif=10000 → lembur = (50-40) × (10000×1.5) = 150.000
+        lembur = (kar->jam - 40) * (kar->tarif * 1.5f);
+    }
+    // Gaji kotor = (total jam × tarif) + upah lembur
+    kar->gajiKotorPerBulan = (kar->jam * kar->tarif) + lembur;
+
+    // --- LANGKAH 2: Proyeksikan Gaji ke Setahun ---
+    // Pajak PPh 21 dihitung dari penghasilan tahunan
+    float gajiSetahun = kar->gajiKotorPerBulan * 12;
+
+    // --- LANGKAH 3: Dapatkan Nilai PTKP ---
+    // PTKP disesuaikan dengan status perkawinan dan jumlah tanggungan
+    kar->ptkp = getPTKP(kar->perkawinan, kar->tanggungan);
+
+    // --- LANGKAH 4: Hitung PKP (bagian penghasilan yang kena pajak) ---
+    // PKP = Penghasilan Setahun - PTKP
+    kar->pkp = gajiSetahun - kar->ptkp;
+    if (kar->pkp < 0) kar->pkp = 0;    // PKP tidak boleh bernilai negatif
+
+    // --- LANGKAH 5: Hitung Total Pajak Setahun (progresif) ---
+    float pajakSetahun = hitungPPh21(kar->pkp);
+
+    // --- LANGKAH 6: Konversi Pajak Setahun ke Per Bulan ---
+    kar->pajakPerBulan = pajakSetahun / 12;
+
+    // --- LANGKAH 7: Hitung Gaji Bersih Per Bulan ---
+    // Gaji bersih = gaji kotor - potongan pajak
+    kar->gajiBersihPerBulan = kar->gajiKotorPerBulan - kar->pajakPerBulan;
+
+    // Simpan gaji bersih ke dalam union sebagai catatan akhir
+    kar->info.gajiPerBulan = kar->gajiBersihPerBulan;
+}
+
+// FUNGSI TAMPILKAN KARYAWAN
+// Menampilkan detail semua karyawan yang tersimpan
+void tampilkanKaryawan(Karyawan *kar, int jumlah)
+{
+    // Jika belum ada data, tampilkan pesan dan keluar dari fungsi
+    if (jumlah == 0)
+    {
+        printf("Tidak Ada Data Karyawan\n");
+        return;
+    }
+
+    // Loop dari index 0 sampai jumlah-1
+    for (int i = 0; i < jumlah; i++)
+    {
+        printf("\n===== KARYAWAN %d =====\n", i + 1);
+        printf("ID                : %d\n", kar[i].id);
+        printf("Nama              : %s\n", kar[i].nama);
+        printf("Jam/Bulan         : %d\n", kar[i].jam);
+        printf("Tarif Per Jam     : Rp%.2f\n", kar[i].tarif);
+
+        // Tampilkan label produktivitas berdasarkan total jam kerja
+        if (kar[i].jam >= 200)
+            printf("Produktivitas     : Sangat Tinggi\n"); // Lebih dari 200 jam/bulan
+        else if (kar[i].jam >= 160)
+            printf("Produktivitas     : Tinggi\n");        // 160–199 jam/bulan
+        else
+            printf("Produktivitas     : Normal\n");        // Di bawah 160 jam/bulan
+
+        // Tampilkan nama jabatan dari nilai enum menggunakan switch
+        switch (kar[i].jabatan)
+        {
+        case STAF:    printf("Jabatan           : Staf\n");    break;
+        case MANAJER: printf("Jabatan           : Manajer\n"); break;
+        case MAGANG:  printf("Jabatan           : Magang\n");  break;
+        }
+
+        // Operator ternary: jika TK tampilkan "Tidak Kawin", jika tidak tampilkan "Kawin"
+        printf("Status Perkawinan : %s\n",
+            kar[i].perkawinan == TK ? "Tidak Kawin (TK)" : "Kawin (K)");
+        printf("Tanggungan        : %d\n", kar[i].tanggungan);
+
+        // Tampilkan rincian perhitungan pajak
+        printf("--- Perhitungan PPh 21 ---\n");
+        printf("Gaji Kotor/bln    : Rp%.2f\n", kar[i].gajiKotorPerBulan);
+        printf("Gaji Kotor/thn    : Rp%.2f\n", kar[i].gajiKotorPerBulan * 12); // Hitung langsung saat tampil
+        printf("PTKP              : Rp%.2f\n", kar[i].ptkp);
+        printf("PKP (setahun)     : Rp%.2f\n", kar[i].pkp);
+        printf("PPh 21/bulan      : Rp%.2f\n", kar[i].pajakPerBulan);
+        printf("Gaji Bersih/bln   : Rp%.2f\n", kar[i].gajiBersihPerBulan);
+    }
+}
+
+
+// FUNGSI CARI KARYAWAN
+// Mencari karyawan berdasarkan ID yang diinput
+// Menggunakan metode pencarian linear (sequential search)
+void cariKaryawan(Karyawan *kar, int jumlah)
+{
+    int id;
+    int ditemukan = 0;  // Flag: 0 = belum ditemukan, 1 = sudah ditemukan
+
+    printf("\nMasukkan ID Karyawan: ");
+    scanf("%d", &id);   // Baca ID yang ingin dicari
+
+    // Cek satu per satu seluruh data karyawan
+    for (int i = 0; i < jumlah; i++)
+    {
+        if (kar[i].id == id)    // Jika ID cocok
+        {
+            printf("\nKaryawan Ditemukan\n");
+            printf("Nama              : %s\n", kar[i].nama);
+            printf("Gaji Kotor/bln    : Rp%.2f\n", kar[i].gajiKotorPerBulan);
+            printf("PPh 21/bulan      : Rp%.2f\n", kar[i].pajakPerBulan);
+            printf("Gaji Bersih/bln   : Rp%.2f\n", kar[i].gajiBersihPerBulan);
+            ditemukan = 1;      // Ubah flag menjadi "sudah ditemukan"
+        }
+    }
+
+    // Jika setelah loop selesai flag masih 0, berarti tidak ada yang cocok
+    if (ditemukan == 0)
+        printf("Karyawan Tidak Ditemukan\n");
+}
+
+// FUNGSI STATISTIK
+// Menampilkan ringkasan statistik gaji seluruh karyawan:
+// gaji tertinggi, terendah, rata-rata, dan total pajak
+void statistik(Karyawan *kar, int jumlah)
+{
+    // Jika belum ada data, tampilkan pesan dan keluar
+    if (jumlah == 0)
+    {
+        printf("Tidak Ada Data Tersedia\n");
+        return;
+    }
+
+    // Gunakan data karyawan pertama sebagai nilai acuan awal perbandingan
+    float tertinggi   = kar[0].gajiBersihPerBulan;
+    float terendah    = kar[0].gajiBersihPerBulan;
+    float totalBersih = 0;  // Akumulator total gaji bersih semua karyawan
+    float totalPajak  = 0;  // Akumulator total pajak semua karyawan
+
+    for (int i = 0; i < jumlah; i++)
+    {
+        // Jika gaji karyawan ini lebih tinggi dari yang tersimpan, perbarui
+        if (kar[i].gajiBersihPerBulan > tertinggi)
+            tertinggi = kar[i].gajiBersihPerBulan;
+
+        // Jika gaji karyawan ini lebih rendah dari yang tersimpan, perbarui
+        if (kar[i].gajiBersihPerBulan < terendah)
+            terendah = kar[i].gajiBersihPerBulan;
+
+        // Tambahkan ke total untuk perhitungan rata-rata
+        totalBersih += kar[i].gajiBersihPerBulan;
+        totalPajak  += kar[i].pajakPerBulan;
+    }
+
+    printf("\n===== STATISTIK =====\n");
+    printf("Gaji Bersih Tertinggi : Rp%.2f\n", tertinggi);
+    printf("Gaji Bersih Terendah  : Rp%.2f\n", terendah);
+    printf("Rata-rata Gaji Bersih : Rp%.2f\n", totalBersih / jumlah); // Rata-rata = total / jumlah
+    printf("Total PPh 21/bulan    : Rp%.2f\n", totalPajak);
+}
